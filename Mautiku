@@ -1,0 +1,37 @@
+import math
+
+radius = float(input("ป้อนรัศมีของวงกลม : "))
+area = math.pt * (radius**2)
+
+print(f"พื้นทีของวงกลม คือ {area:.2f}")
+
+
+
+base = float(input("กรอกตัวเลขความยาวของฐาน : "))
+height = float(input("กรอกตัวเลขความสูง : "))
+area = 0.5 * base * height
+
+print("พื้นที่สามเหลียมมีค่าเท่ากับ %.2f" % area)
+
+
+
+side = float(input("กรอกตัวเลขความยาวของด้าน : "))
+area = side * side
+
+print("พื้นทีสีเหลี่ยมจัสตุรัสมีค่าเท่ากัย %.2f" % area)
+
+
+
+height = float(input("ป้อนตัวเลขความสูงขอสี่่เหลี่ยมคางหมู : "))
+side = float(input("ป้อนผลบวกของด้านคู่่ขนานของสี่เหลี่ยมคางหมู : "))
+area = (1/2) * height * side
+
+print("พื้นทีสี่เหลี่ยมคางหมูคือ ", area)
+
+
+
+width = float(input("กรอกตัวเลขความกว้าง : "))
+xlong = float(input("กรอกตัวเลขความยาว : "))
+area = width * xlong
+
+print("พื้นที่สี่เหลี่ยมผืนผ้ามีค่าเท่ากับ %.2f" % area)
