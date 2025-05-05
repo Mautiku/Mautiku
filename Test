@@ -7,17 +7,10 @@ local confirmed = false
 local firstRun = true
 local alreadyApplied = false
 
-local packs = {
-	Default = {
-		idle1 = "rbxassetid://16738333868",
-		idle2 = "rbxassetid://16738334710",
-		walk = "rbxassetid://16738340646",
-		run = "rbxassetid://16738337225",
-		jump = "rbxassetid://104325245285198",
-		fall = "rbxassetid://616003713",
-		climb = "rbxassetid://18537363391"
-	},
-	Ninja = {
+local selectedPack = {}
+
+if _G.animPack == "Ninja" then
+	selectedPack = {
 		idle1 = "rbxassetid://656117400",
 		idle2 = "rbxassetid://656118341",
 		walk = "rbxassetid://656121766",
@@ -26,10 +19,27 @@ local packs = {
 		fall = "rbxassetid://656121397",
 		climb = "rbxassetid://656114359"
 	}
-}
-
-local selectedPack = _G.animPack or "Default"
-local Anims = packs[selectedPack] or packs.Default
+elseif _G.animPack == "Zombie" then
+	selectedPack = {
+		idle1 = "rbxassetid://616158929",
+		idle2 = "rbxassetid://616160636",
+		walk = "rbxassetid://616168032",
+		run = "rbxassetid://616163682",
+		jump = "rbxassetid://616161998",
+		fall = "rbxassetid://616157476",
+		climb = "rbxassetid://616156119"
+	}
+else -- default
+	selectedPack = {
+		idle1 = "rbxassetid://16738333868",
+		idle2 = "rbxassetid://16738334710",
+		walk = "rbxassetid://16738340646",
+		run = "rbxassetid://16738337225",
+		jump = "rbxassetid://104325245285198",
+		fall = "rbxassetid://616003713",
+		climb = "rbxassetid://18537363391"
+	}
+end
 
 local function applyAnimPack(char)
 	local animate = char:FindFirstChild("Animate")
@@ -39,13 +49,13 @@ local function applyAnimPack(char)
 		if obj then obj.AnimationId = id end
 	end
 
-	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation1"), Anims.idle1)
-	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation2"), Anims.idle2)
-	set(animate:FindFirstChild("walk") and animate.walk:FindFirstChild("WalkAnim"), Anims.walk)
-	set(animate:FindFirstChild("run") and animate.run:FindFirstChild("RunAnim"), Anims.run)
-	set(animate:FindFirstChild("jump") and animate.jump:FindFirstChild("JumpAnim"), Anims.jump)
-	set(animate:FindFirstChild("fall") and animate.fall:FindFirstChild("FallAnim"), Anims.fall)
-	set(animate:FindFirstChild("climb") and animate.climb:FindFirstChild("ClimbAnim"), Anims.climb)
+	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation1"), selectedPack.idle1)
+	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation2"), selectedPack.idle2)
+	set(animate:FindFirstChild("walk") and animate.walk:FindFirstChild("WalkAnim"), selectedPack.walk)
+	set(animate:FindFirstChild("run") and animate.run:FindFirstChild("RunAnim"), selectedPack.run)
+	set(animate:FindFirstChild("jump") and animate.jump:FindFirstChild("JumpAnim"), selectedPack.jump)
+	set(animate:FindFirstChild("fall") and animate.fall:FindFirstChild("FallAnim"), selectedPack.fall)
+	set(animate:FindFirstChild("climb") and animate.climb:FindFirstChild("ClimbAnim"), selectedPack.climb)
 end
 
 local function waitForRequired(char)
@@ -117,7 +127,7 @@ local function askToRun()
 
 	StarterGui:SetCore("SendNotification", {
 		Title = "Run Script?",
-		Text = "ใช้ animation pack: " .. selectedPack .. " มั้ย",
+		Text = "จะให้ใช้ animation pack นี้มั้ย",
 		Duration = 10,
 		Callback = bindable,
 		Button1 = "Yes",
@@ -145,7 +155,7 @@ player.Chatted:Connect(function(msg)
 		isStopped = true
 		StarterGui:SetCore("SendNotification", {
 			Title = "Script Stopped",
-			Text = "หยุดใช้ animation pack แล้ว",
+			Text = "จะไม่ใช้ animation pack นี้อีก",
 			Duration = 3
 		})
 	end
