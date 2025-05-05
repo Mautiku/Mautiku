@@ -1,15 +1,5 @@
-local player = game.Players.LocalPlayer
-local StarterGui = game:GetService("StarterGui")
-local RunService = game:GetService("RunService")
-
-local isStopped = false
-local confirmed = false
-local firstRun = true
-local alreadyApplied = false
-
-_G.AnimPack = _G.AnimPack or "Ninja" -- default
-
-local Packs = {
+local packName = _G.AnimPack
+local allPacks = {
 	Ninja = {
 		idle1 = "rbxassetid://656118852", 
 		idle2 = "rbxassetid://656118852", 
@@ -30,103 +20,68 @@ local Packs = {
 	}
 }
 
-local function applyAnimPack(char)
-	local anims = Packs[_G.AnimPack]
-	if not anims then return end
-
-	local animate = char:FindFirstChild("Animate")
-	if not animate then return end
-
-	local function set(obj, id)
-		if obj then obj.AnimationId = id end
-	end
-
-	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation1"), anims.idle1)
-	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation2"), anims.idle2)
-	set(animate:FindFirstChild("walk") and animate.walk:FindFirstChild("WalkAnim"), anims.walk)
-	set(animate:FindFirstChild("run") and animate.run:FindFirstChild("RunAnim"), anims.run)
-	set(animate:FindFirstChild("jump") and animate.jump:FindFirstChild("JumpAnim"), anims.jump)
-	set(animate:FindFirstChild("fall") and animate.fall:FindFirstChild("FallAnim"), anims.fall)
-	set(animate:FindFirstChild("climb") and animate.climb:FindFirstChild("ClimbAnim"), anims.climb)
+if type(packName) ~= "string" or not allPacks[packName] then
+	warn("[ANIM ERROR] _G.AnimPack ไม่มีหรือพิมพ์ผิด")
+	return
 end
 
-local function handleCharacter(char)
-	if isStopped or not confirmed or alreadyApplied then return end
-
-	local hum = char:FindFirstChild("Humanoid") or char:WaitForChild("Humanoid", 1)
-	local animate = char:FindFirstChild("Animate")
-
-	if hum and animate then
-		local newAnim = animate:Clone()
-		animate:Destroy()
-		newAnim.Parent = char
-		task.wait(0.2)
-		applyAnimPack(char)
-		alreadyApplied = true
-
-		if firstRun then
-			firstRun = false
-			hum.Health = 0
-		end
+local selected = allPacks[packName]
+local requiredKeys = {"idle1", "idle2", "walk", "run", "jump", "fall", "climb"}
+for _, key in pairs(requiredKeys) do
+	if not selected[key] or typeof(selected[key]) ~= "string" then
+		warn("[ANIM ERROR] \""..packName.."\" ขาด "..key.." หรือ id ผิด")
+		return
 	end
 end
 
-local function startWatchdog()
-	RunService.Heartbeat:Connect(function()
-		if not confirmed or isStopped then return end
-		if player.Character and not alreadyApplied then
-			if player.Character:FindFirstChild("Animate") and player.Character:FindFirstChild("Humanoid") then
-				handleCharacter(player.Character)
-			end
-		end
-	end)
-end
+local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+local hum = char:WaitForChild("Humanoid")
+local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
 
-local function askToRun()
-	local bindable = Instance.new("BindableFunction")
-	bindable.OnInvoke = function(response)
-		if response == "Yes" then
-			confirmed = true
-			if player.Character then
-				handleCharacter(player.Character)
-			end
+-- ลบตัวเดิมก่อน
+hum:ClearAllChildren()
+hum.Animator:Destroy()
+Instance.new("Animator", hum)
+
+-- สร้าง animate ใหม่
+local animateScript = Instance.new("LocalScript", char)
+animateScript.Name = "Animate"
+animateScript.Source = [[
+local anims = {
+	idle = {Anim1 = "]]..selected.idle1..[[", Anim2 = "]]..selected.idle2..[["},
+	walk = "]]..selected.walk..[[",
+	run = "]]..selected.run..[[",
+	jump = "]]..selected.jump..[[",
+	fall = "]]..selected.fall..[[",
+	climb = "]]..selected.climb..[["
+}
+
+local human = script.Parent:WaitForChild("Humanoid")
+local animator = human:FindFirstChildOfClass("Animator")
+local loaded = {}
+
+for state, data in pairs(anims) do
+	if typeof(data) == "table" then
+		for i,v in pairs(data) do
+			local anim = Instance.new("Animation")
+			anim.AnimationId = v
+			loaded[state..i] = animator:LoadAnimation(anim)
 		end
+	else
+		local anim = Instance.new("Animation")
+		anim.AnimationId = data
+		loaded[state] = animator:LoadAnimation(anim)
 	end
-
-	StarterGui:SetCore("SendNotification", {
-		Title = "Run Anim Pack?",
-		Text = "ใช้ pack: " .. tostring(_G.AnimPack),
-		Duration = 10,
-		Callback = bindable,
-		Button1 = "Yes",
-		Button2 = "No"
-	})
 end
 
-player.CharacterAdded:Connect(function(char)
-	alreadyApplied = false
-	handleCharacter(char)
-	char.DescendantAdded:Connect(function(desc)
-		if not alreadyApplied and (desc.Name == "Animate" or desc.Name == "Humanoid") then
-			handleCharacter(char)
-		end
-	end)
-end)
-
-player.Chatted:Connect(function(msg)
-	if msg:lower() == "/e stop" then
-		isStopped = true
-		StarterGui:SetCore("SendNotification", {
-			Title = "Script Stopped",
-			Text = "หยุดใช้ animation pack แล้ว",
-			Duration = 3
-		})
+human.Running:Connect(function(speed)
+	if speed > 1 then
+		loaded.walk:Play()
+	else
+		loaded.idleAnim1:Play()
 	end
 end)
 
-if player.Character then
-	handleCharacter(player.Character)
-end
-
-startWatchdog()
-askToRun()
+human.Jumping:Connect(function()
+	loaded.jump:Play()
+end)
