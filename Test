@@ -7,30 +7,19 @@ local confirmed = false
 local firstRun = true
 local alreadyApplied = false
 
-local selectedPack = {}
+_G.AnimPack = _G.AnimPack or "Ninja" -- default
 
-if _G.animPack == "Ninja" then
-	selectedPack = {
-		idle1 = "rbxassetid://656117400",
-		idle2 = "rbxassetid://656118341",
+local Packs = {
+	Ninja = {
+		idle1 = "rbxassetid://656118852", 
+		idle2 = "rbxassetid://656118852", 
 		walk = "rbxassetid://656121766",
-		run = "rbxassetid://656118852",
+		run = "rbxassetid://656121766",
 		jump = "rbxassetid://656117878",
-		fall = "rbxassetid://656121397",
+		fall = "rbxassetid://656121934",
 		climb = "rbxassetid://656114359"
-	}
-elseif _G.animPack == "Zombie" then
-	selectedPack = {
-		idle1 = "rbxassetid://616158929",
-		idle2 = "rbxassetid://616160636",
-		walk = "rbxassetid://616168032",
-		run = "rbxassetid://616163682",
-		jump = "rbxassetid://616161998",
-		fall = "rbxassetid://616157476",
-		climb = "rbxassetid://616156119"
-	}
-else -- default
-	selectedPack = {
+	},
+	Cool = {
 		idle1 = "rbxassetid://16738333868",
 		idle2 = "rbxassetid://16738334710",
 		walk = "rbxassetid://16738340646",
@@ -39,9 +28,12 @@ else -- default
 		fall = "rbxassetid://616003713",
 		climb = "rbxassetid://18537363391"
 	}
-end
+}
 
 local function applyAnimPack(char)
+	local anims = Packs[_G.AnimPack]
+	if not anims then return end
+
 	local animate = char:FindFirstChild("Animate")
 	if not animate then return end
 
@@ -49,40 +41,26 @@ local function applyAnimPack(char)
 		if obj then obj.AnimationId = id end
 	end
 
-	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation1"), selectedPack.idle1)
-	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation2"), selectedPack.idle2)
-	set(animate:FindFirstChild("walk") and animate.walk:FindFirstChild("WalkAnim"), selectedPack.walk)
-	set(animate:FindFirstChild("run") and animate.run:FindFirstChild("RunAnim"), selectedPack.run)
-	set(animate:FindFirstChild("jump") and animate.jump:FindFirstChild("JumpAnim"), selectedPack.jump)
-	set(animate:FindFirstChild("fall") and animate.fall:FindFirstChild("FallAnim"), selectedPack.fall)
-	set(animate:FindFirstChild("climb") and animate.climb:FindFirstChild("ClimbAnim"), selectedPack.climb)
-end
-
-local function waitForRequired(char)
-	local start = tick()
-	local hum, animate
-	while tick() - start < 3 do
-		hum = hum or char:FindFirstChild("Humanoid")
-		animate = animate or char:FindFirstChild("Animate")
-		if hum and animate then
-			return hum, animate
-		end
-		task.wait()
-	end
-	return hum, animate
+	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation1"), anims.idle1)
+	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation2"), anims.idle2)
+	set(animate:FindFirstChild("walk") and animate.walk:FindFirstChild("WalkAnim"), anims.walk)
+	set(animate:FindFirstChild("run") and animate.run:FindFirstChild("RunAnim"), anims.run)
+	set(animate:FindFirstChild("jump") and animate.jump:FindFirstChild("JumpAnim"), anims.jump)
+	set(animate:FindFirstChild("fall") and animate.fall:FindFirstChild("FallAnim"), anims.fall)
+	set(animate:FindFirstChild("climb") and animate.climb:FindFirstChild("ClimbAnim"), anims.climb)
 end
 
 local function handleCharacter(char)
 	if isStopped or not confirmed or alreadyApplied then return end
 
 	local hum = char:FindFirstChild("Humanoid") or char:WaitForChild("Humanoid", 1)
-	local animate = char:FindFirstChild("Animate") or char:WaitForChild("Animate", 1)
-
-	if not hum or not animate then
-		hum, animate = waitForRequired(char)
-	end
+	local animate = char:FindFirstChild("Animate")
 
 	if hum and animate then
+		local newAnim = animate:Clone()
+		animate:Destroy()
+		newAnim.Parent = char
+		task.wait(0.2)
 		applyAnimPack(char)
 		alreadyApplied = true
 
@@ -104,16 +82,6 @@ local function startWatchdog()
 	end)
 end
 
-local function checkRunAnimation(char)
-	local humanoid = char:FindFirstChild("Humanoid")
-	if humanoid and humanoid.MoveDirection.Magnitude > 0 then
-		local animate = char:FindFirstChild("Animate")
-		if animate and animate.run then
-			applyAnimPack(char)
-		end
-	end
-end
-
 local function askToRun()
 	local bindable = Instance.new("BindableFunction")
 	bindable.OnInvoke = function(response)
@@ -126,8 +94,8 @@ local function askToRun()
 	end
 
 	StarterGui:SetCore("SendNotification", {
-		Title = "Run Script?",
-		Text = "จะให้ใช้ animation pack นี้มั้ย",
+		Title = "Run Anim Pack?",
+		Text = "ใช้ pack: " .. tostring(_G.AnimPack),
 		Duration = 10,
 		Callback = bindable,
 		Button1 = "Yes",
@@ -138,11 +106,6 @@ end
 player.CharacterAdded:Connect(function(char)
 	alreadyApplied = false
 	handleCharacter(char)
-
-	RunService.Heartbeat:Connect(function()
-		checkRunAnimation(char)
-	end)
-
 	char.DescendantAdded:Connect(function(desc)
 		if not alreadyApplied and (desc.Name == "Animate" or desc.Name == "Humanoid") then
 			handleCharacter(char)
@@ -155,7 +118,7 @@ player.Chatted:Connect(function(msg)
 		isStopped = true
 		StarterGui:SetCore("SendNotification", {
 			Title = "Script Stopped",
-			Text = "จะไม่ใช้ animation pack นี้อีก",
+			Text = "หยุดใช้ animation pack แล้ว",
 			Duration = 3
 		})
 	end
