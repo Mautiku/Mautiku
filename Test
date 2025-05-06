@@ -34,16 +34,16 @@ local packs = {
 		jump = "rbxassetid://104325245285198",
 		fall = "rbxassetid://616003713",
 		climb = "rbxassetid://18537363391"
-        },
-OldSchool = {
-        idle1 = "rbxassetid://507766666", -- Idle
-        idle2 = "rbxassetid://507766951", -- Alternate Idle
-        walk = "rbxassetid://507777826", -- Walk
-        run = "rbxassetid://507767714", -- Run
-        jump = "rbxassetid://507766388", -- Jump
-        fall = "rbxassetid://507766388", -- Fall
-        climb = "rbxassetid://507766388" -- Climb
-    }
+	},
+	Oldschool = {
+		idle1 = "rbxassetid://5319828217",
+		idle2 = "rbxassetid://5319831086",
+		walk = "rbxassetid://5319847204",
+		run = "rbxassetid://5319850769",
+		jump = "rbxassetid://5319841935",
+		fall = "rbxassetid://5319848919",
+		climb = "rbxassetid://5319828217"
+	}
 }
 
 local selectedPackName = getgenv().pack or "Default"
