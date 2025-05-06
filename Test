@@ -34,6 +34,7 @@ local packs = {
 		jump = "rbxassetid://104325245285198",
 		fall = "rbxassetid://616003713",
 		climb = "rbxassetid://18537363391"
+        },
 OldSchool = {
         idle1 = "rbxassetid://507766666", -- Idle
         idle2 = "rbxassetid://507766951", -- Alternate Idle
