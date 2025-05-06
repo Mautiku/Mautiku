@@ -1,33 +1,20 @@
 local player = game.Players.LocalPlayer
 local StarterGui = game:GetService("StarterGui")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local packName = getgenv().pack or "Default"
-local stoppedFlagName = "NoAnimScript_" .. player.UserId
-
-local isStopped = ReplicatedStorage:FindFirstChild(stoppedFlagName) ~= nil
+local isStopped = false
 local confirmed = false
 local alreadyApplied = false
 local firstRun = true
 
-local Packs = {
-	Default = {
-		idle1 = "rbxassetid://16738333868",
-		idle2 = "rbxassetid://16738334710",
-		walk = "rbxassetid://16738340646",
-		run = "rbxassetid://16738337225",
-		jump = "rbxassetid://104325245285198",
-		fall = "rbxassetid://616003713",
-		climb = "rbxassetid://18537363391"
-	},
+local packs = {
 	Ninja = {
 		idle1 = "rbxassetid://656117400",
 		idle2 = "rbxassetid://656118341",
 		walk = "rbxassetid://656121766",
 		run = "rbxassetid://656118852",
 		jump = "rbxassetid://656117878",
-		fall = "rbxassetid://656115606",
+		fall = "rbxassetid://656121934",
 		climb = "rbxassetid://656114359"
 	},
 	Robot = {
@@ -38,13 +25,27 @@ local Packs = {
 		jump = "rbxassetid://616090535",
 		fall = "rbxassetid://616092998",
 		climb = "rbxassetid://616086039"
+	},
+	Default = {
+		idle1 = "rbxassetid://16738333868",
+		idle2 = "rbxassetid://16738334710",
+		walk = "rbxassetid://16738340646",
+		run = "rbxassetid://16738337225",
+		jump = "rbxassetid://104325245285198",
+		fall = "rbxassetid://616003713",
+		climb = "rbxassetid://18537363391"
 	}
 }
 
-local function applyAnimPack(char)
-	local pack = Packs[packName]
-	if not pack then return end
+local selectedPackName = getgenv().pack or "Default"
+local Anims = packs[selectedPackName]
 
+if not Anims then
+	warn("Invalid pack name: " .. tostring(selectedPackName))
+	return
+end
+
+local function applyAnimPack(char)
 	local animate = char:FindFirstChild("Animate")
 	if not animate then return end
 
@@ -52,13 +53,13 @@ local function applyAnimPack(char)
 		if obj then obj.AnimationId = id end
 	end
 
-	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation1"), pack.idle1)
-	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation2"), pack.idle2)
-	set(animate:FindFirstChild("walk") and animate.walk:FindFirstChild("WalkAnim"), pack.walk)
-	set(animate:FindFirstChild("run") and animate.run:FindFirstChild("RunAnim"), pack.run)
-	set(animate:FindFirstChild("jump") and animate.jump:FindFirstChild("JumpAnim"), pack.jump)
-	set(animate:FindFirstChild("fall") and animate.fall:FindFirstChild("FallAnim"), pack.fall)
-	set(animate:FindFirstChild("climb") and animate.climb:FindFirstChild("ClimbAnim"), pack.climb)
+	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation1"), Anims.idle1)
+	set(animate:FindFirstChild("idle") and animate.idle:FindFirstChild("Animation2"), Anims.idle2)
+	set(animate:FindFirstChild("walk") and animate.walk:FindFirstChild("WalkAnim"), Anims.walk)
+	set(animate:FindFirstChild("run") and animate.run:FindFirstChild("RunAnim"), Anims.run)
+	set(animate:FindFirstChild("jump") and animate.jump:FindFirstChild("JumpAnim"), Anims.jump)
+	set(animate:FindFirstChild("fall") and animate.fall:FindFirstChild("FallAnim"), Anims.fall)
+	set(animate:FindFirstChild("climb") and animate.climb:FindFirstChild("ClimbAnim"), Anims.climb)
 end
 
 local function waitForRequired(char)
@@ -77,12 +78,15 @@ local function handleCharacter(char)
 	if isStopped or not confirmed or alreadyApplied then return end
 	local hum = char:FindFirstChild("Humanoid") or char:WaitForChild("Humanoid", 1)
 	local animate = char:FindFirstChild("Animate") or char:WaitForChild("Animate", 1)
+
 	if not hum or not animate then
 		hum, animate = waitForRequired(char)
 	end
+
 	if hum and animate then
 		applyAnimPack(char)
 		alreadyApplied = true
+
 		if firstRun then
 			firstRun = false
 			hum.Health = 0
@@ -90,20 +94,17 @@ local function handleCharacter(char)
 	end
 end
 
-local function startWatchdog()
-	RunService.Heartbeat:Connect(function()
-		if isStopped or not confirmed then return end
-		if player.Character and not alreadyApplied then
-			if player.Character:FindFirstChild("Animate") and player.Character:FindFirstChild("Humanoid") then
-				handleCharacter(player.Character)
-			end
+local function checkRunAnimation(char)
+	local humanoid = char:FindFirstChild("Humanoid")
+	if humanoid and humanoid.MoveDirection.Magnitude > 0 then
+		local animate = char:FindFirstChild("Animate")
+		if animate and animate.run then
+			applyAnimPack(char)
 		end
-	end)
+	end
 end
 
 local function askToRun()
-	if isStopped then return end
-
 	local bindable = Instance.new("BindableFunction")
 	bindable.OnInvoke = function(response)
 		if response == "Yes" then
@@ -116,7 +117,7 @@ local function askToRun()
 
 	StarterGui:SetCore("SendNotification", {
 		Title = "Run Script?",
-		Text = "ใช้ animation pack '" .. packName .. "' มั้ย?",
+		Text = "ใช้ animation pack: " .. selectedPackName .. " ?",
 		Duration = 10,
 		Callback = bindable,
 		Button1 = "Yes",
@@ -124,33 +125,35 @@ local function askToRun()
 	})
 end
 
-player.Chatted:Connect(function(msg)
-	if msg:lower() == "/e stop" then
-		isStopped = true
-		if not ReplicatedStorage:FindFirstChild(stoppedFlagName) then
-			local flag = Instance.new("BoolValue")
-			flag.Name = stoppedFlagName
-			flag.Parent = ReplicatedStorage
+local function startWatchdog()
+	RunService.Heartbeat:Connect(function()
+		if not confirmed or isStopped then return end
+		if player.Character and not alreadyApplied then
+			if player.Character:FindFirstChild("Animate") and player.Character:FindFirstChild("Humanoid") then
+				handleCharacter(player.Character)
+			end
 		end
-		StarterGui:SetCore("SendNotification", {
-			Title = "Script Stopped",
-			Text = "จะไม่รัน script นี้อีก",
-			Duration = 4
-		})
-	end
-end)
+	end)
+end
+
+local function stopScriptCompletely()
+	isStopped = true
+	StarterGui:SetCore("SendNotification", {
+		Title = "Script Stopped",
+		Text = "ไม่ใช้ animation pack แล้ว",
+		Duration = 3
+	})
+end
 
 player.CharacterAdded:Connect(function(char)
 	alreadyApplied = false
+	if isStopped then
+		return
+	end
 	handleCharacter(char)
 
 	RunService.Heartbeat:Connect(function()
-		if not isStopped then
-			local humanoid = char:FindFirstChild("Humanoid")
-			if humanoid and humanoid.MoveDirection.Magnitude > 0 then
-				applyAnimPack(char)
-			end
-		end
+		checkRunAnimation(char)
 	end)
 
 	char.DescendantAdded:Connect(function(desc)
@@ -158,6 +161,12 @@ player.CharacterAdded:Connect(function(char)
 			handleCharacter(char)
 		end
 	end)
+end)
+
+player.Chatted:Connect(function(msg)
+	if msg:lower() == "/e stop" then
+		stopScriptCompletely()
+	end
 end)
 
 if player.Character then
