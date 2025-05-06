@@ -36,13 +36,13 @@ local packs = {
 		climb = "rbxassetid://18537363391"
 	},
 	Oldschool = {
-		idle1 = "rbxassetid://5319828217",
-		idle2 = "rbxassetid://5319831086",
-		walk = "rbxassetid://5319847204",
-		run = "rbxassetid://5319850769",
-		jump = "rbxassetid://5319841935",
-		fall = "rbxassetid://5319848919",
-		climb = "rbxassetid://5319828217"
+		idle1 = "rbxassetid://10921230744",
+		idle2 = "rbxassetid://10921232093",
+		walk = "rbxassetid://10921244891",
+		run = "rbxassetid://10921240218",
+		jump = "rbxassetid://10921242013",
+		fall = "rbxassetid://10921241244",
+		climb = "rbxassetid://10921229866"
 	}
 }
 
