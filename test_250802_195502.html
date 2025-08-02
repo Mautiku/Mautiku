@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมจับปุ่มให้ทัน! (พร้อมกระดานคะแนน)</title>
+    <!-- Tailwind CSS CDN สำหรับการจัดสไตล์ที่สวยงามและตอบสนอง -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* สไตล์พื้นฐานสำหรับ body และ font */
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: #e2e8f0; /* สีพื้นหลังอ่อนๆ */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        /* สไตล์สำหรับพื้นที่เกม */
+        #gameArea {
+            position: relative; /* สำคัญสำหรับการเคลื่อนที่ของปุ่ม */
+            width: 100%;
+            max-width: 700px; /* จำกัดความกว้างสูงสุด */
+            height: 400px; /* ความสูงคงที่ */
+            background-color: #ffffff;
+            border: 2px solid #94a3b8; /* เส้นขอบสีเทา */
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden; /* ซ่อนปุ่มที่อาจจะออกนอกขอบ */
+            margin-bottom: 1.5rem;
+        }
+        /* สไตล์สำหรับปุ่มที่เคลื่อนที่ */
+        #movingButton {
+            position: absolute;
+            background-color: #3b82f6; /* สีน้ำเงิน */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px; /* ทำให้เป็นวงกลม/รี */
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-out; /* เพิ่ม transition ให้ดูนุ่มนวลขึ้น */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex; /* ใช้ flexbox เพื่อจัดข้อความให้อยู่ตรงกลาง */
+            align-items: center;
+            justify-content: center;
+            min-width: 80px; /* กำหนดความกว้างขั้นต่ำ */
+            min-height: 40px; /* กำหนดความสูงขั้นต่ำ */
+            user-select: none; /* ป้องกันการเลือกข้อความ */
+            -webkit-user-select: none; /* สำหรับ Safari */
+            -moz-user-select: none; /* สำหรับ Firefox */
+            -ms-user-select: none; /* สำหรับ IE/Edge */
+        }
+        #movingButton:hover {
+            background-color: #2563eb; /* สีน้ำเงินเข้มขึ้นเมื่อ hover */
+            transform: scale(1.05); /* ขยายเล็กน้อยเมื่อ hover */
+        }
+        #movingButton:active {
+            transform: scale(0.95); /* หดเล็กน้อยเมื่อคลิก */
+        }
+        /* สไตล์สำหรับปุ่มควบคุม (Start/Reset) */
+        .control-button {
+            padding: 0.75rem 2rem;
+            font-weight: bold;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-out;
+        }
+        .control-button:hover {
+            transform: translateY(-2px);
+        }
+        .control-button:active {
+            transform: translateY(0);
+        }
+        /* สไตล์สำหรับ Modal */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(17, 24, 39, 0.75); /* bg-gray-900 with opacity */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 28rem; /* max-w-sm */
+            margin: auto;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen bg-gray-200 p-4">
+
+    <div class="container mx-auto p-6 bg-white rounded-2xl shadow-xl text-center">
+        <h1 class="text-4xl font-extrabold text-gray-800 mb-4">เกมจับปุ่มให้ทัน!</h1>
+        <p class="text-lg text-gray-600 mb-6">คลิกปุ่มที่เคลื่อนที่ให้ได้มากที่สุดภายใน 10 วินาที!</p>
+
+        <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-6 mb-8">
+            <div class="text-xl font-semibold text-gray-700">
+                คะแนน: <span id="scoreDisplay" class="text-indigo-600 text-3xl">0</span>
+            </div>
+            <div class="text-xl font-semibold text-gray-700">
+                เวลา: <span id="timerDisplay" class="text-red-500 text-3xl">10</span> วินาที
+            </div>
+        </div>
+
+        <!-- พื้นที่เกม -->
+        <div id="gameArea" class="relative bg-gray-50 rounded-xl shadow-inner">
+            <button id="movingButton" class="text-lg">กดดิ</button>
+        </div>
+
+        <!-- ปุ่มควบคุมเกม -->
+        <div class="flex justify-center space-x-4 mt-6">
+            <button id="startButton" class="control-button bg-green-500 text-white hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75">
+                เริ่มเกม
+            </button>
+            <button id="resetButton" class="control-button bg-red-500 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75">
+                รีเซ็ต
+            </button>
+        </div>
+
+        <!-- แสดง User ID -->
+        <div class="mt-6 text-sm text-gray-500">
+            <span id="userIdDisplay"></span>
+        </div>
+    </div>
+
+    <!-- กระดานคะแนน -->
+    <div class="container mx-auto p-6 bg-white rounded-2xl shadow-xl mt-8 w-full max-w-2xl">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">กระดานคะแนนสูงสุด</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">อันดับ</th>
+                        <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">ชื่อผู้เล่น</th>
+                        <th class="py-3 px-4 text-right text-sm font-semibold text-gray-600 uppercase tracking-wider">คะแนน</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody" class="divide-y divide-gray-200">
+                    <!-- คะแนนจะถูกโหลดที่นี่ -->
+                    <tr><td colspan="3" class="py-4 text-center text-gray-500">กำลังโหลดคะแนน...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Player Name Input Modal -->
+    <div id="nameInputModal" class="modal hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">ใส่ชื่อของคุณ</h2>
+            <input type="text" id="playerNameInput" placeholder="ชื่อผู้เล่น" class="w-full p-3 border border-gray-300 rounded-md mb-4 text-lg focus:ring-indigo-500 focus:border-indigo-500">
+            <button id="submitPlayerName" class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75">
+                เริ่มเล่น!
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="modal hidden">
+        <div class="modal-content">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">เกมจบแล้ว!</h2>
+            <p class="text-xl text-gray-700 mb-6">คุณทำคะแนนได้: <span id="finalScoreDisplay" class="font-extrabold text-indigo-600">0</span> คะแนน</p>
+            <button id="closeGameOverModal" class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75">
+                ตกลง
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        // นำเข้าโมดูล Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // รับอ้างอิงถึงองค์ประกอบ HTML
+        const gameArea = document.getElementById('gameArea');
+        const movingButton = document.getElementById('movingButton');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const leaderboardBody = document.getElementById('leaderboardBody');
+
+        // Modal Elements
+        const nameInputModal = document.getElementById('nameInputModal');
+        const playerNameInput = document.getElementById('playerNameInput');
+        const submitPlayerName = document.getElementById('submitPlayerName');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const finalScoreDisplay = document.getElementById('finalScoreDisplay');
+        const closeGameOverModal = document.getElementById('closeGameOverModal');
+
+        // ตัวแปรสถานะเกม
+        let score = 0;
+        let timeLeft = 10; // เวลาเริ่มต้น 10 วินาที
+        let timerInterval; // ตัวแปรสำหรับเก็บ setInterval ของตัวจับเวลา
+        let isGameActive = false; // สถานะว่าเกมกำลังทำงานอยู่หรือไม่
+        let currentPlayerName = "ผู้เล่นไม่ระบุชื่อ"; // ชื่อผู้เล่นเริ่มต้น
+
+        // ตัวแปร Firebase
+        let app;
+        let db;
+        let auth;
+        let userId; // จะเก็บ ID ผู้ใช้ที่ตรวจสอบสิทธิ์แล้ว
+
+        // --- Firebase Initialization and Authentication ---
+        async function initializeFirebase() {
+            try {
+                // ตรวจสอบว่า __firebase_config ถูกกำหนดไว้หรือไม่
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // ลงชื่อเข้าใช้ด้วย Custom Token หรือแบบไม่ระบุตัวตน
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // ตรวจสอบสถานะการตรวจสอบสิทธิ์
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userIdDisplay.textContent = `User ID: ${userId}`;
+                        console.log("Firebase initialized and user signed in:", userId);
+                        fetchLeaderboard(); // ดึงกระดานคะแนนเมื่อตรวจสอบสิทธิ์แล้ว
+                    } else {
+                        console.log("No user signed in.");
+                        userId = crypto.randomUUID(); // ใช้ ID สุ่มสำหรับผู้ใช้ที่ไม่ระบุตัวตน
+                        userIdDisplay.textContent = `User ID: ${userId} (Anonymous)`;
+                    }
+                });
+            } catch (error) {
+                console.error("Error initializing Firebase or signing in:", error);
+                // Fallback สำหรับ userId หาก Firebase ล้มเหลว
+                userId = crypto.randomUUID();
+                userIdDisplay.textContent = `User ID: ${userId} (Error/Anonymous)`;
+            }
+        }
+
+        // --- Firestore Data Operations ---
+
+        // ฟังก์ชันสำหรับบันทึกคะแนนลง Firestore
+        async function saveScore(playerName, score) {
+            if (!db || !userId) {
+                console.error("Firestore not initialized or user not authenticated.");
+                return;
+            }
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                // บันทึกคะแนนในคอลเลกชันสาธารณะ
+                const scoresCollectionRef = collection(db, `artifacts/${appId}/public/data/gameScores`);
+                await addDoc(scoresCollectionRef, {
+                    playerName: playerName,
+                    score: score,
+                    timestamp: serverTimestamp() // ใช้ timestamp จากเซิร์ฟเวอร์เพื่อความสอดคล้องกัน
+                });
+                console.log("Score saved successfully!");
+            } catch (error) {
+                console.error("Error saving score:", error);
+            }
+        }
+
+        // ฟังก์ชันสำหรับดึงและแสดงกระดานคะแนนแบบเรียลไทม์
+        function fetchLeaderboard() {
+            if (!db) {
+                console.error("Firestore not initialized.");
+                return;
+            }
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const scoresCollectionRef = collection(db, `artifacts/${appId}/public/data/gameScores`);
+
+            // ดึงเอกสารทั้งหมดและจัดเรียงในฝั่งไคลเอ็นต์
+            onSnapshot(scoresCollectionRef, (snapshot) => {
+                const scores = [];
+                snapshot.forEach((doc) => {
+                    scores.push(doc.data());
+                });
+
+                // จัดเรียงคะแนน: คะแนนสูงสุดก่อน, ถ้าคะแนนเท่ากันให้เรียงตามเวลาที่บันทึก (เก่าสุดก่อน)
+                scores.sort((a, b) => {
+                    if (b.score !== a.score) {
+                        return b.score - a.score;
+                    }
+                    // จัดการกรณีที่ timestamp อาจเป็น null (เช่น serverTimestamp ยังไม่ถูกตั้งค่า)
+                    const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
+                    const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+                    return timeA - timeB; // เรียงตาม timestamp น้อยไปมากสำหรับคะแนนที่เท่ากัน
+                });
+
+                displayLeaderboard(scores.slice(0, 10)); // แสดง 10 อันดับแรก
+            }, (error) => {
+                console.error("Error fetching leaderboard:", error);
+                leaderboardBody.innerHTML = '<tr><td colspan="3" class="py-2 text-center text-red-500">เกิดข้อผิดพลาดในการโหลดคะแนน</td></tr>';
+            });
+        }
+
+        // ฟังก์ชันสำหรับแสดงกระดานคะแนนในตาราง HTML
+        function displayLeaderboard(scores) {
+            leaderboardBody.innerHTML = ''; // ล้างรายการเดิม
+
+            if (scores.length === 0) {
+                leaderboardBody.innerHTML = '<tr><td colspan="3" class="py-2 text-center text-gray-500">ยังไม่มีคะแนน</td></tr>';
+                return;
+            }
+
+            scores.forEach((entry, index) => {
+                const row = leaderboardBody.insertRow();
+                row.className = 'border-b border-gray-200 last:border-b-0';
+                row.innerHTML = `
+                    <td class="py-2 px-4 text-left font-medium text-gray-700">${index + 1}</td>
+                    <td class="py-2 px-4 text-left text-gray-800">${escapeHTML(entry.playerName)}</td>
+                    <td class="py-2 px-4 text-right font-bold text-indigo-600">${entry.score}</td>
+                `;
+            });
+        }
+
+        // Helper function เพื่อป้องกัน XSS (Cross-Site Scripting)
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
+        }
+
+        // --- Game Logic ---
+
+        // ฟังก์ชันสำหรับสุ่มตำแหน่งของปุ่ม
+        function moveButton() {
+            const gameAreaWidth = gameArea.offsetWidth;
+            const gameAreaHeight = gameArea.offsetHeight;
+            const buttonWidth = movingButton.offsetWidth;
+            const buttonHeight = movingButton.offsetHeight;
+
+            const randomX = Math.floor(Math.random() * (gameAreaWidth - buttonWidth));
+            const randomY = Math.floor(Math.random() * (gameAreaHeight - buttonHeight));
+
+            movingButton.style.transform = `translate(${randomX}px, ${randomY}px)`;
+        }
+
+        // ฟังก์ชันเมื่อคลิกปุ่ม
+        function handleButtonClick() {
+            if (isGameActive) {
+                score++;
+                scoreDisplay.textContent = score;
+                moveButton();
+            }
+        }
+
+        // ฟังก์ชันสำหรับเริ่มเกม
+        function startGame() {
+            if (isGameActive) return;
+
+            isGameActive = true;
+            score = 0;
+            timeLeft = 10;
+            scoreDisplay.textContent = score;
+            timerDisplay.textContent = timeLeft;
+            movingButton.style.display = 'flex';
+
+            moveButton();
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            startButton.disabled = true;
+            resetButton.disabled = false;
+        }
+
+        // ฟังก์ชันสำหรับจบเกม
+        function endGame() {
+            isGameActive = false;
+            clearInterval(timerInterval);
+            movingButton.style.display = 'none';
+
+            // แสดง Modal จบเกม
+            finalScoreDisplay.textContent = score;
+            gameOverModal.classList.remove('hidden');
+
+            // บันทึกคะแนนลง Firestore
+            if (currentPlayerName && score > 0) { // บันทึกเฉพาะเมื่อมีชื่อและคะแนนมากกว่า 0
+                saveScore(currentPlayerName, score);
+            }
+
+            startButton.disabled = false;
+            resetButton.disabled = false;
+        }
+
+        // ฟังก์ชันสำหรับรีเซ็ตเกม (กลับสู่สถานะเริ่มต้น)
+        function resetGame() {
+            isGameActive = false;
+            clearInterval(timerInterval);
+            score = 0;
+            timeLeft = 10;
+            scoreDisplay.textContent = score;
+            timerDisplay.textContent = timeLeft;
+            movingButton.style.transform = 'translate(0px, 0px)';
+            movingButton.style.display = 'none';
+
+            startButton.disabled = false;
+            resetButton.disabled = true;
+            playerNameInput.value = ''; // ล้างชื่อผู้เล่นในช่องกรอก
+            currentPlayerName = "ผู้เล่นไม่ระบุชื่อ"; // รีเซ็ตชื่อผู้เล่น
+        }
+
+        // --- Event Listeners ---
+
+        startButton.addEventListener('click', () => {
+            // แสดง Modal ให้ใส่ชื่อก่อนเริ่มเกม
+            nameInputModal.classList.remove('hidden');
+            playerNameInput.focus(); // โฟกัสที่ช่องกรอกชื่อ
+        });
+
+        submitPlayerName.addEventListener('click', () => {
+            const name = playerNameInput.value.trim();
+            if (name) {
+                currentPlayerName = name;
+                nameInputModal.classList.add('hidden');
+                startGame(); // เริ่มเกมหลังจากได้ชื่อ
+            } else {
+                // แทนที่จะใช้ alert() ให้สร้าง modal แจ้งเตือนเล็กๆ แทน
+                const tempAlertModal = document.createElement('div');
+                tempAlertModal.className = 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50';
+                tempAlertModal.innerHTML = `
+                    <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-xs mx-auto">
+                        <p class="text-lg text-gray-800 mb-4">กรุณาใส่ชื่อผู้เล่น!</p>
+                        <button class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">ตกลง</button>
+                    </div>
+                `;
+                document.body.appendChild(tempAlertModal);
+                tempAlertModal.querySelector('button').addEventListener('click', () => {
+                    document.body.removeChild(tempAlertModal);
+                });
+            }
+        });
+
+        closeGameOverModal.addEventListener('click', () => {
+            gameOverModal.classList.add('hidden');
+        });
+
+        resetButton.addEventListener('click', resetGame);
+        movingButton.addEventListener('click', handleButtonClick);
+
+        // สำหรับการจัดการ Touch events บนมือถือ
+        movingButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleButtonClick();
+        }, { passive: false });
+
+        // --- Initial Setup ---
+        window.onload = function() {
+            initializeFirebase(); // เริ่มต้น Firebase
+            resetGame(); // ตั้งค่าเริ่มต้นให้พร้อม
+        };
+    </script>
+</body>
+</html>
